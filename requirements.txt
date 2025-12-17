@@ -1,0 +1,9 @@
+numpy
+gym
+matplotlib
+stable-baselines3
+torch
+tensorboard
+cloudpickle
+gymnasium
+shimmy
