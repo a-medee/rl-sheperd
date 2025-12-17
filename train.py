@@ -6,14 +6,14 @@ from agents.rl_agent import train_rl_agent_ppo_mlp,train_rl_agent_a2c_mlp,train_
 for level in [1,2,3,4]:
 
     env = ShepherdEnv(level=level)
-    model = train_rl_agent_td3_mlp(env, timesteps=1000000)
+    model = train_rl_agent_td3_mlp(env, timesteps=1000)
     model.save(f"models/shepherd_level{level}_td3_mlp")
 
     env = ShepherdEnv(level=level)
-    model = train_rl_agent_a2c_mlp(env, timesteps=1000000)
-    model.save("models/shepherd_level{level}_a2c_mlp")
+    model = train_rl_agent_a2c_mlp(env, timesteps=1000)
+    model.save(f"models/shepherd_level{level}_a2c_mlp")
 
     env = ShepherdEnv(level=level)
-    model = train_rl_agent_ppo_mlp(env, timesteps=1000000)
-    model.save("models/shepherd_level{level}_ppo_mlp")
+    model = train_rl_agent_ppo_mlp(env, timesteps=1000)
+    model.save(f"models/shepherd_level{level}_ppo_mlp")
 

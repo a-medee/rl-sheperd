@@ -7,3 +7,4 @@ tensorboard
 cloudpickle
 gymnasium
 shimmy
+pygame
