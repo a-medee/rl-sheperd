@@ -21,9 +21,10 @@ class ShepherdEnv(gym.Env):
     def __init__(self, level=1, n_sheep=0, screen_size=600, sheep_radius=5, goal_radius=100, max_steps=2000, dt=2e-1):
         super().__init__()
         self.level = level
-        if n_sheep <= 0:
-            self.n_sheep  = np.random.randint(0, 10)
-        self.n_sheep = n_sheep
+        if n_sheep == 0:
+            self.n_sheep  = np.random.randint(1, 10)
+        else:
+            self.n_sheep = n_sheep
         self.n_shepherds = 1 if level <= 2 else 2
         self.screen_size = screen_size
         self.sheep_radius = sheep_radius
