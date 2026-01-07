@@ -11,11 +11,11 @@ def train_rl_agent_ppo_mlp(env,eval_env, timesteps=500000):
             env, 
             verbose=1, 
             tensorboard_log="logs/ppo",
-            n_steps=5,  # Smaller buffer = more frequent log updates
+            n_steps=5000,  # Smaller buffer = more frequent log updates
             device='cpu'
         )
     eval_callback = EvalCallback(eval_env, best_model_save_path='./logs/ppo/',
-                                log_path='./logs/ppo/', eval_freq=10,
+                                log_path='./logs/ppo/', eval_freq=5000,
                                 deterministic=True, render=False)
     model.learn(total_timesteps=timesteps,callback=eval_callback)
     return model
