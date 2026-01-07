@@ -40,7 +40,7 @@ done = False
 while not done:
     actions = []
     for i in range(env.n_shepherds):
-        if MODEL != "ruleBase":
+        if MODEL == "ruleBase":
             # RL-based action
             a = agent.act(obs, env.n_sheep, env.n_shepherds, i)
         else:
