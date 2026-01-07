@@ -4,11 +4,11 @@ from agents.rl_agent import train_rl_agent_ppo_mlp,train_rl_agent_a2c_mlp,train_
 
 for level in [1,2,3,4]:
 
-    env = ShepherdEnv(level=level,n_sheep=5)
-    eval_env = ShepherdEnv(level=level, n_sheep=5)
-    print(f"\t ----- LEVEL {level} / TD3  (#sheep:{env.n_sheep})-----")
-    model = train_rl_agent_td3_mlp(env,eval_env, timesteps=1000000)
-    model.save(f"models/shepherd_level{level}_td3_mlp")
+    # env = ShepherdEnv(level=level,n_sheep=5)
+    # eval_env = ShepherdEnv(level=level, n_sheep=5)
+    # print(f"\t ----- LEVEL {level} / TD3  (#sheep:{env.n_sheep})-----")
+    # model = train_rl_agent_td3_mlp(env,eval_env, timesteps=1000000)
+    # model.save(f"models/shepherd_level{level}_td3_mlp")
 
     print(f"\n\n ----- LEVEL {level} -----")
 
