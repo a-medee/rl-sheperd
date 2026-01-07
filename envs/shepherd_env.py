@@ -121,31 +121,67 @@ class ShepherdEnv(gym.Env):
 
     def step(self, actions):
         self.steps += 1
-        
         self._update_shepherds(actions)
         self._update_sheep()
-        
-        # Reward Logic (Shaping)
+
         reward = 0
+        
+        # 1. Big reward for sheep in goal
         num_safe = sum([1 for s in self.sheep if s.is_safe])
+        reward += num_safe * 100  
         
-        # Reward for sheep being safe
-        reward += num_safe * 10.0 
-        
-        # Small penalty for time to encourage speed
-        reward -= 0.1 
-        
-        # Reward Shaping: Distance from sheep to goal
+        # 2. Shaping: Reward for Shepherd being near the sheep
+        # (If the shepherd is too far, it can't move them)
+        for sh in self.shepherds:
+            for s in self.sheep:
+                if not s.is_safe:
+                    dist = np.linalg.norm(sh.pos - s.pos)
+                    if dist < 100:
+                        reward += 0.1  # Small bonus for staying close
+                    else:
+                        reward -= 0.01 # Small penalty for being too far
+
+        # 3. Shaping: Reward for Sheep getting closer to goal
         for s in self.sheep:
             if not s.is_safe:
                 dist_to_goal = np.linalg.norm(s.pos - self.goals[0])
-                reward -= dist_to_goal * 0.001 # Move sheep closer
-        
+                # We use a negative distance so that "closer" is a "higher" (less negative) number
+                reward -= dist_to_goal * 0.01 
+
+        # 4. Small penalty for time to encourage efficiency
+        reward -= 0.1
+
         # End conditions
         if num_safe == self.n_sheep or self.steps >= self.max_steps:
             self.done = True
-            
+
         return self._get_obs(), reward, self.done, {}
+    
+    # def step(self, actions):
+    #     self.steps += 1
+        
+    #     self._update_shepherds(actions)
+    #     self._update_sheep()
+        
+    #     # Reward Logic (Shaping)
+    #     reward = 0
+    #     num_safe = sum([1 for s in self.sheep if s.is_safe])
+        
+    #     # Reward for sheep being safe
+    #     reward += num_safe * 10.0 
+        
+    #     # Small penalty for time to encourage speed
+    #     reward -= 0.1 
+        
+    #     # Reward Shaping: Distance from sheep to goal
+    #     for s in self.sheep:
+    #         if not s.is_safe:
+    #             dist_to_goal = np.linalg.norm(s.pos - self.goals[0])
+    #             reward -= dist_to_goal * 0.001 # Move sheep closer
+        
+        
+            
+    #     return self._get_obs(), reward, self.done, {}
 
     def render(self, mode='human'):
         if self.screen is None:
