@@ -146,19 +146,38 @@ class ShepherdEnv(gym.Env):
             sh.pos = np.clip(sh.pos, [0,0], self.bounds)
             # print(f"Shepherd {i} action: {a}, new pos: {sh.pos} with {a}")
 
-    def reward_function(self):
+    def reward_function(self): 
 
         reached = self._check_goal()
         if self.level < 4:
             rewards = np.zeros(self.n_shepherds)
-            reward = reached.sum()
+            reward = reached.sum()*100 
         else:
             # Level 4 competitive: difference of sheep in own goal
             rewards = np.zeros(self.n_shepherds)
             for i in range(self.n_shepherds):
                 goal = self.goals[i]
-                rewards[i] = sum(np.linalg.norm(s.pos - goal)<self.goal_radius for s in self.sheep)
-            reward = rewards[0] - rewards[1]
+                rewards[i] = sum(np.linalg.norm(s.pos - goal)<self.goal_radius for s in self.sheep)* 100
+            reward = (rewards[0] - rewards[1])* 100 
+
+        #Reward for Shepherd being near the sheep
+        # (If the shepherd is too far, it can't move them)
+        for i,sh in enumerate(self.shepherds):
+            for s in self.sheep:
+                if not np.linalg.norm(s.pos - self.goals[i])<self.goal_radius:
+                    dist = np.linalg.norm(sh.pos - s.pos)
+                    if dist < 100:
+                        reward += 0.01  # Small bonus for staying close
+                    else:
+                        reward -= 0.005 # Small penalty for being too far
+
+                    # 3. Shaping: Reward for Sheep getting closer to goal
+                    dist_to_goal = np.linalg.norm(s.pos - self.goals[0])
+                    # We use a negative distance so that "closer" is a "higher" (less negative) number
+                    reward -= dist_to_goal * 0.1 
+
+        # 4. Small penalty for time to encourage efficiency
+        reward -= 0.01
 
         # Done if all sheep reached goal or max steps
         if reached.all() or self.steps >= self.max_steps:
@@ -211,13 +230,13 @@ class ShepherdEnv(gym.Env):
         # Display reward score for shepherds
         font = pygame.font.Font(None, 24)
         if self.level < 4:
-            score_text = font.render(f"Level: {self.level} (Step:{int(self.steps)}), Score: {self.reward_function()[0]}", True, (0, 0, 0))
+            score_text = font.render(f"Level: {self.level} (time:{int(self.steps)}), Score: {self._check_goal().sum()} ({self.reward_function()[0]:.2f})", True, (0, 0, 0))
             self.screen.blit(score_text, (10, 10))
         else:
-            score_text  = font.render(f"Level: {self.level}  (Step:{int(self.steps)}) ", True, (0,0,0))
+            score_text  = font.render(f"Level: {self.level}  (time:{int(self.steps)}) ", True, (0,0,0))
             self.screen.blit(score_text, (10,10))
             for i, sh in enumerate(self.shepherds):
-                score_text  = font.render(f"Shepherd {i+1} : {self.reward_function()[1][i]}", True, colors_s[i%len(colors_s)])
+                score_text  = font.render(f"Shepherd {i+1} : ({self.reward_function()[1][i]:.2f})", True, colors_s[i%len(colors_s)])
                 self.screen.blit(score_text, (self.screen_size- 150 - i * 150,10))
 
 

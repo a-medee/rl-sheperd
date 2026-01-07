@@ -1,6 +1,7 @@
 from envs.shepherd_env import ShepherdEnv
 from agents.rl_agent import train_rl_agent_ppo_mlp,train_rl_agent_a2c_mlp,train_rl_agent_td3_mlp
 
+<<<<<<< HEAD
 
 
 
@@ -10,6 +11,10 @@ for level in [1,2,3,4]:
     # eval_env = ShepherdEnv(level=level, n_sheep=5)
     # print(f"\t ----- LEVEL {level} / PPO (#sheep:{env.n_sheep})-----")
     # model = train_rl_agent_ppo_mlp(env,eval_env, timesteps=1000000)
+=======
+for level in [1,2,3,4]:
+
+>>>>>>> HEAD@{1}
 
     print(f"\n\n ----- LEVEL {level} -----")
 
@@ -39,4 +44,5 @@ for level in [1,2,3,4]:
         model.save(f"models/shepherd_level{level}_ppo_mlp")
     except:
          print(f"!!! LEVEL {level} / PPO  Filed")
+
 
