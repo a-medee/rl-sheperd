@@ -6,8 +6,16 @@ from stable_baselines3.common.callbacks import EvalCallback
 def train_rl_agent_ppo_mlp(env,eval_env, timesteps=500000):
     # model = PPO("MlpPolicy", env, verbose=1,device='cpu', tensorboard_log="./ppo_shepherd_logs/")
     model = PPO("MlpPolicy", env, verbose=1,device='cpu')
+    model = PPO(
+            "MlpPolicy", 
+            env, 
+            verbose=1, 
+            tensorboard_log="logs/ppo",
+            n_steps=5,  # Smaller buffer = more frequent log updates
+            device='cpu'
+        )
     eval_callback = EvalCallback(eval_env, best_model_save_path='./logs/ppo/',
-                                log_path='./logs/ppo/', eval_freq=5000,
+                                log_path='./logs/ppo/', eval_freq=10,
                                 deterministic=True, render=False)
     model.learn(total_timesteps=timesteps,callback=eval_callback)
     return model
