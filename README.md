@@ -24,7 +24,7 @@ The environment is implemented in **Gym style**, includes **real-time visualizat
 
 ### Level 1 – Basic Shepherding
 - 1 shepherd
-- 2–10 sheep
+- 5 sheeps
 - Random goal (circular area)
 - No obstacles
 - Deterministic dynamics
