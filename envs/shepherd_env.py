@@ -17,171 +17,170 @@ class Sheep:
 class ShepherdEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, level=1, n_sheep=5, screen_size=600, goal_radius=60, max_steps=1000):
+    def __init__(self, level=1, n_sheep=0, screen_size=600, sheep_radius=5, goal_radius=100, max_steps=2000, dt=2e-1):
         super().__init__()
         self.level = level
-        self.n_sheep = n_sheep # Must be fixed for RL
+        if n_sheep == 0:
+            self.n_sheep  = np.random.randint(1, 10)
+        else:
+            self.n_sheep = n_sheep
         self.n_shepherds = 1 if level <= 2 else 2
         self.screen_size = screen_size
+        self.sheep_radius = sheep_radius
         self.goal_radius = goal_radius
         self.max_steps = max_steps
-        self.max_wheel_velocity = 5.0
+        self.dt = dt
+        self.max_wheel_velocity = 10.0
 
-        # Define Observation Space
-        # Sheep (2*N) + Shepherds (3*N: x, y, theta) + Goals (2*N_goals)
-        n_goals = 1 if level < 4 else 2
-        obs_dim = (2 * self.n_sheep) + (3 * self.n_shepherds) + (2 * n_goals)
-        
+        self.bounds = np.array([screen_size, screen_size])
+
+        # Gym spaces
+        obs_dim = 2*(n_sheep + self.n_shepherds + self.n_shepherds)
         self.observation_space = spaces.Box(low=0, high=screen_size, shape=(obs_dim,), dtype=np.float32)
-        
-        # Action space: [Left Wheel Vel, Right Wheel Vel] for each shepherd
-        self.action_space = spaces.Box(low=-1, high=1, shape=(2 * self.n_shepherds,), dtype=np.float32)
+        self.action_space = spaces.Box(low=-1, high=1, shape=(2*self.n_shepherds,), dtype=np.float32)
 
+        # Environment objects
+        self.sheep = []
+        self.shepherds = []
+        self.goals = []
+        self.obstacles = []
+        self.obstacle_size = 200
+
+        # Pygame
         self.screen = None
         self.clock = None
-        self.obstacle_size = 120
+
         self.reset()
 
     def reset(self):
         self.steps = 0
         self.done = False
-        
-        # Initialize Sheeps (ensure they aren't in the goal immediately)
-        self.sheep = [Sheep(np.random.rand(2) * (self.screen_size * 0.8) + 50) for _ in range(self.n_sheep)]
-        
-        # Initialize Shepherds
-        self.shepherds = [Shepherd(np.random.rand(2) * self.screen_size) for _ in range(self.n_shepherds)]
+
+        # Sheep
+        self.sheep = [Sheep(np.random.rand(2)*self.screen_size) for _ in range(self.n_sheep)]
+
+        # Shepherds
+        self.shepherds = [Shepherd(np.random.rand(2)*self.screen_size) for _ in range(self.n_shepherds)]
 
         # Goals
         if self.level < 4:
-            self.goals = [np.array([self.screen_size/2, self.screen_size/2])] # Central goal for Level 1-3
+            self.goals = [self.goal_radius+np.random.rand(2)*(self.screen_size-2*self.goal_radius) for _ in range(self.n_shepherds)]
         else:
-            self.goals = [np.array([100, 100]), np.array([500, 500])]
+            # Level 4: fixed corners
+            self.goals = [np.array([50,50]), np.array([self.screen_size-50, self.screen_size-50])]
 
+        # Obstacles (Level 2+)
         self.obstacles = []
         if self.level >= 2:
-            self.obstacles.append(np.array([self.screen_size/2 - 50, self.screen_size/2 + 50]))
+            x = np.random.randint(0, self.screen_size - self.obstacle_size)
+            y = np.random.randint(0, self.screen_size - self.obstacle_size)
+            if self.level > 3:
+                while any(np.linalg.norm(np.array([x + self.obstacle_size / 2, y + self.obstacle_size / 2]) - g) < self.goal_radius for g in self.goals):
+                    x = np.random.randint(0, self.screen_size - self.obstacle_size)
+                    y = np.random.randint(0, self.screen_size - self.obstacle_size)
+            self.obstacles.append(np.array([x, y]))
 
         return self._get_obs()
 
     def _get_obs(self):
-        sheep_pos = np.array([s.pos for s in self.sheep]).flatten() / self.screen_size
-        shep_data = []
-        for sh in self.shepherds:
-            shep_data.extend([sh.pos[0]/self.screen_size, sh.pos[1]/self.screen_size, sh.theta/(2*np.pi)])
-        goals_pos = np.array(self.goals).flatten() / self.screen_size
-        
-        return np.concatenate([sheep_pos, shep_data, goals_pos]).astype(np.float32)
+        sheep_pos = np.array([s.pos for s in self.sheep]).flatten()
+        shepherd_pos = np.array([sh.pos for sh in self.shepherds]).flatten()
+        goals_pos = np.array(self.goals).flatten()
+        return np.concatenate([sheep_pos, shepherd_pos, goals_pos]).astype(np.float32)
 
     def _update_sheep(self):
+        repulsion_dist = 50
         for s in self.sheep:
-            if s.is_safe: continue
-            
             move = np.zeros(2)
-            
-            # 1. Check if safe
+            freeze_move = False
+
             for g in self.goals:
                 if np.linalg.norm(s.pos - g) < self.goal_radius:
-                    s.is_safe = True
-            
-            # 2. React to shepherds (Repulsion)
+                    freeze_move = True
+                # Attraction to goal
+            if freeze_move:
+                continue
+            # Repulsion from shepherds
             for sh in self.shepherds:
-                vec = s.pos - sh.pos
+                vec = sh.pos - s.pos
                 dist = np.linalg.norm(vec)
-                if dist < 80:
-                    move += (vec / (dist + 1e-6)) * 4
-            
-            # 3. Ambient movement
-            if np.linalg.norm(move) < 0.1:
-                move += np.random.uniform(-1, 1, 2)
+                if dist < repulsion_dist:
+                    move -= (vec / (dist+1e-6)) * 8
 
-            # Obstacle Collision (Improved)
-            new_pos = s.pos + move
+            if np.linalg.norm(move) < 1e-6:
+                # Not near shepherds
+                if self.level == 4:
+                    # Move toward nearest goal
+                    dists = [np.linalg.norm(g - s.pos) for g in self.goals]
+                    goal = self.goals[np.argmin(dists)]
+                    direction = goal - s.pos
+                    move += 0.02 * direction / (np.linalg.norm(direction)+1e-6)+(np.random.rand(2)-0.5)
+                else:
+                    # Random movement
+                    move += 2 * (np.random.rand(2)-0.5)
+
+            
+
+            # Obstacle avoidance
             for obs in self.obstacles:
-                if (obs[0] < new_pos[0] < obs[0] + self.obstacle_size) and \
-                   (obs[1] < new_pos[1] < obs[1] + self.obstacle_size):
-                    move = -move # Bounce
-            
-            s.pos = np.clip(s.pos + move, 10, self.screen_size - 10)
+                if (obs[0] <= s.pos[0]+move[0] <= obs[0]+self.obstacle_size) and \
+                (obs[1] <= s.pos[1]+move[0] <= obs[1]+self.obstacle_size):
+                    s.pos += move * -2  # Simple bounce back
 
-    def _update_shepherds(self, actions):
-        # actions is a flat array [sh1_left, sh1_right, sh2_left, sh2_right...]
-        for i, sh in enumerate(self.shepherds):
-            v_l = actions[i*2] * self.max_wheel_velocity
-            v_r = actions[i*2 + 1] * self.max_wheel_velocity
-            
-            # Differential Drive Kinematics
-            v = (v_l + v_r) / 2.0
-            omega = (v_r - v_l) / sh.wheel_base
-            
-            sh.theta += omega
-            sh.pos[0] += v * np.cos(sh.theta)
-            sh.pos[1] += v * np.sin(sh.theta)
-            sh.pos = np.clip(sh.pos, 0, self.screen_size)
+            s.pos += move
+            s.pos = np.clip(s.pos, [10,10], self.bounds-10)
+
+    def _check_goal(self):
+        reached = np.zeros(len(self.sheep), dtype=bool)
+        for i, s in enumerate(self.sheep):
+            for g in self.goals:
+                if np.linalg.norm(s.pos - g) < self.goal_radius:
+                    reached[i] = True
+        return reached
+
+    def update_wheels(self, actions):
+        for i, (sh, a) in enumerate(zip(self.shepherds, actions)):
+            # Update position
+            sh.pos += a * self.max_wheel_velocity
+            # Clip to bounds
+            sh.pos = np.clip(sh.pos, [0,0], self.bounds)
+            # print(f"Shepherd {i} action: {a}, new pos: {sh.pos} with {a}")
+
+    def reward_function(self):
+
+        reached = self._check_goal()
+        if self.level < 4:
+            rewards = np.zeros(self.n_shepherds)
+            reward = reached.sum()
+        else:
+            # Level 4 competitive: difference of sheep in own goal
+            rewards = np.zeros(self.n_shepherds)
+            for i in range(self.n_shepherds):
+                goal = self.goals[i]
+                rewards[i] = sum(np.linalg.norm(s.pos - goal)<self.goal_radius for s in self.sheep)
+            reward = rewards[0] - rewards[1]
+
+        # Done if all sheep reached goal or max steps
+        if reached.all() or self.steps >= self.max_steps:
+            self.done = True
+
+        return reward,rewards
 
     def step(self, actions):
         self.steps += 1
-        self._update_shepherds(actions)
+        if self.done:
+            return self._get_obs(), 0, self.done, {}
+
+        # Update shepherds
+        self.update_wheels(actions)
+
+        # Update sheep
         self._update_sheep()
 
-        reward = 0
-        
-        # 1. Big reward for sheep in goal
-        num_safe = sum([1 for s in self.sheep if s.is_safe])
-        reward += num_safe * 100  
-        
-        # 2. Shaping: Reward for Shepherd being near the sheep
-        # (If the shepherd is too far, it can't move them)
-        for sh in self.shepherds:
-            for s in self.sheep:
-                if not s.is_safe:
-                    dist = np.linalg.norm(sh.pos - s.pos)
-                    if dist < 100:
-                        reward += 0.1  # Small bonus for staying close
-                    else:
-                        reward -= 0.01 # Small penalty for being too far
-
-        # 3. Shaping: Reward for Sheep getting closer to goal
-        for s in self.sheep:
-            if not s.is_safe:
-                dist_to_goal = np.linalg.norm(s.pos - self.goals[0])
-                # We use a negative distance so that "closer" is a "higher" (less negative) number
-                reward -= dist_to_goal * 0.01 
-
-        # 4. Small penalty for time to encourage efficiency
-        reward -= 0.1
-
-        # End conditions
-        if num_safe == self.n_sheep or self.steps >= self.max_steps:
-            self.done = True
+        # Compute reward
+        reward,_ = self.reward_function()
 
         return self._get_obs(), reward, self.done, {}
-    
-    # def step(self, actions):
-    #     self.steps += 1
-        
-    #     self._update_shepherds(actions)
-    #     self._update_sheep()
-        
-    #     # Reward Logic (Shaping)
-    #     reward = 0
-    #     num_safe = sum([1 for s in self.sheep if s.is_safe])
-        
-    #     # Reward for sheep being safe
-    #     reward += num_safe * 10.0 
-        
-    #     # Small penalty for time to encourage speed
-    #     reward -= 0.1 
-        
-    #     # Reward Shaping: Distance from sheep to goal
-    #     for s in self.sheep:
-    #         if not s.is_safe:
-    #             dist_to_goal = np.linalg.norm(s.pos - self.goals[0])
-    #             reward -= dist_to_goal * 0.001 # Move sheep closer
-        
-        
-            
-    #     return self._get_obs(), reward, self.done, {}
 
     def render(self, mode='human'):
         if self.screen is None:
@@ -189,27 +188,38 @@ class ShepherdEnv(gym.Env):
             self.screen = pygame.display.set_mode((self.screen_size, self.screen_size))
             self.clock = pygame.time.Clock()
 
-        self.screen.fill((240, 240, 240))
-        
-        # Draw Goals
-        for g in self.goals:
-            pygame.draw.circle(self.screen, (200, 255, 200), g.astype(int), self.goal_radius)
-        
-        # Draw Obstacles
+        self.screen.fill((255,255,255))
+
+        # Draw obstacles
         for obs in self.obstacles:
-            pygame.draw.rect(self.screen, (100, 100, 100), (*obs, self.obstacle_size, self.obstacle_size))
+            pygame.draw.rect(self.screen, (100,100,100), (*obs, self.obstacle_size, self.obstacle_size))
 
-        # Draw Sheep
+        # Draw goals
+        colors_g = [(255,0,0),(0,255,0)]
+        for i, g in enumerate(self.goals):
+            pygame.draw.circle(self.screen, colors_g[i%len(colors_g)], g.astype(int), self.goal_radius)
+
+        # Draw sheep
         for s in self.sheep:
-            color = (0, 150, 0) if s.is_safe else (50, 50, 50)
-            pygame.draw.circle(self.screen, color, s.pos.astype(int), 5)
+            pygame.draw.circle(self.screen, (0,0,0), s.pos.astype(int), self.sheep_radius)
 
-        # Draw Shepherds (with heading indicator)
-        for sh in self.shepherds:
-            pygame.draw.circle(self.screen, (200, 0, 0), sh.pos.astype(int), 10)
-            # Draw line to show direction
-            end_line = sh.pos + [15 * np.cos(sh.theta), 15 * np.sin(sh.theta)]
-            pygame.draw.line(self.screen, (0,0,0), sh.pos, end_line, 3)
+        # Draw shepherds
+        colors_s = [(255,0,0),(0,255,0)]
+        for i, sh in enumerate(self.shepherds):
+            pygame.draw.circle(self.screen, colors_s[i%len(colors_s)], sh.pos.astype(int), self.sheep_radius*2)
+
+        # Display reward score for shepherds
+        font = pygame.font.Font(None, 24)
+        if self.level < 4:
+            score_text = font.render(f"Level: {self.level} (Step:{int(self.steps)}), Score: {self.reward_function()[0]}", True, (0, 0, 0))
+            self.screen.blit(score_text, (10, 10))
+        else:
+            score_text  = font.render(f"Level: {self.level}  (Step:{int(self.steps)}) ", True, (0,0,0))
+            self.screen.blit(score_text, (10,10))
+            for i, sh in enumerate(self.shepherds):
+                score_text  = font.render(f"Shepherd {i+1} : {self.reward_function()[1][i]}", True, colors_s[i%len(colors_s)])
+                self.screen.blit(score_text, (self.screen_size- 150 - i * 150,10))
+
 
         pygame.display.flip()
-        self.clock.tick(60)
+        self.clock.tick(30)  # Limit to 30 FPS                                      

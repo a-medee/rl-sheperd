@@ -17,7 +17,7 @@ LEVEL = args.level
 MODEL = args.model
 
 # Initialize environment and agent
-env = ShepherdEnv(level=LEVEL,n_sheep=4)
+env = ShepherdEnv(level=LEVEL,n_sheep=5)
 print(f"Environment initialized with {env.n_sheep} sheep and {env.n_shepherds} shepherd(s).")
 if MODEL == "ruleBase":
     agent = RuleBasedShepherd(env_init=env,drive_distance=5)
@@ -40,12 +40,12 @@ done = False
 while not done:
     actions = []
     for i in range(env.n_shepherds):
-        if MODEL != "ruleBase":
+        if MODEL == "ruleBase":
             # RL-based action
             a = agent.act(obs, env.n_sheep, env.n_shepherds, i)
         else:
-            a, _ = agent.predict(obs, deterministic=True)
-        actions.extend([a])
+            a, _ = agent.predict(obs)#, deterministic=True)
+        actions.extend(a)
     actions = np.array(actions)
 
     # Step environment
