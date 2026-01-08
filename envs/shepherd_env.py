@@ -218,6 +218,7 @@ class ShepherdEnv(gym.Env):
         colors_g = [(255,0,0),(0,255,0)]
         for i, g in enumerate(self.goals):
             pygame.draw.circle(self.screen, colors_g[i%len(colors_g)], g.astype(int), self.goal_radius, width=1)
+            pygame.draw.circle(self.screen, colors_g[i%len(colors_g)], g.astype(int), self.goal_radius-4, width=1)
 
         # Draw sheep
         for s in self.sheep:
