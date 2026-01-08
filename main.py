@@ -9,8 +9,8 @@ import argparse
 LEVEL = 1         # 1,2,3,4
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description="Shepherd Environment Simulation")
-parser.add_argument("--level", type=int, choices=[1, 2, 3, 4], default=1, help="Level of the environment (1-4)")
-parser.add_argument("--model", type=str, choices=["ruleBase", "PPO", "A2C", "TD3"], default="ruleBase", help="Model to use (ruleBase, PPO, A2C, TD3)")
+parser.add_argument("-l","--level", type=int, choices=[1, 2, 3, 4], default=1, help="Level of the environment (1-4)")
+parser.add_argument("-m","--model", type=str, choices=["ruleBase", "PPO", "A2C", "TD3"], default="ruleBase", help="Model to use (ruleBase, PPO, A2C, TD3)")
 args = parser.parse_args()
 
 LEVEL = args.level
@@ -23,13 +23,13 @@ if MODEL == "ruleBase":
     agent = RuleBasedShepherd(env_init=env,drive_distance=5)
     print("Using Rule-Based Shepherd Agent.")
 elif MODEL == "PPO":
-    agent = PPO.load(f"models/shepherd_level{LEVEL}_ppo_mlp", env=env)
+    agent = PPO.load(f"models/shepherd_level{LEVEL}_ppo_mlp", env=env,device='cpu')
     print("Using PPO Agent.")
 elif MODEL == "A2C":
-    agent = A2C.load(f"models/shepherd_level{LEVEL}_a2c_mlp", env=env)
+    agent = A2C.load(f"models/shepherd_level{LEVEL}_a2c_mlp", env=env,device='cpu')
     print("Using A2C Agent.")
 elif MODEL == "TD3":
-    agent = TD3.load(f"models/shepherd_level{LEVEL}_td3_mlp", env=env)
+    agent = TD3.load(f"models/shepherd_level{LEVEL}_td3_mlp", env=env,device='cpu')
     print("Using TD3 Agent.")
 else:
     raise ValueError("Invalid model type specified.")
