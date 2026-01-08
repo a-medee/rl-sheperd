@@ -42,7 +42,7 @@ while not done:
     for i in range(env.n_shepherds):
         if MODEL == "ruleBase":
             # RL-based action
-            a = agent.act(obs, env.n_sheep, env.n_shepherds, i)
+            a = [agent.act(obs, env.n_sheep, env.n_shepherds, i)]
         else:
             a, _ = agent.predict(obs)#, deterministic=True)
         actions.extend(a)

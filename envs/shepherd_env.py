@@ -119,8 +119,6 @@ class ShepherdEnv(gym.Env):
                     # Random movement
                     move += 2 * (np.random.rand(2)-0.5)
 
-            
-
             # Obstacle avoidance
             for obs in self.obstacles:
                 if (obs[0] <= s.pos[0]+move[0] <= obs[0]+self.obstacle_size) and \
@@ -144,7 +142,7 @@ class ShepherdEnv(gym.Env):
             sh.pos += a * self.max_wheel_velocity
             # Clip to bounds
             sh.pos = np.clip(sh.pos, [0,0], self.bounds)
-            # print(f"Shepherd {i} action: {a}, new pos: {sh.pos} with {a}")
+            # print(f"Shepherd {i} action: {a}, new pos: {sh.pos}")
 
     def reward_function(self): 
 
@@ -187,8 +185,12 @@ class ShepherdEnv(gym.Env):
 
     def step(self, actions):
         self.steps += 1
+
+        # Compute reward
+        reward,_ = self.reward_function()
+
         if self.done:
-            return self._get_obs(), 0, self.done, {}
+            return self._get_obs(), self.reward_function(), self.done, {}
 
         # Update shepherds
         self.update_wheels(actions)
@@ -196,8 +198,7 @@ class ShepherdEnv(gym.Env):
         # Update sheep
         self._update_sheep()
 
-        # Compute reward
-        reward,_ = self.reward_function()
+        print(f"Step {self.steps}, Reward: {reward}")
 
         return self._get_obs(), reward, self.done, {}
 
