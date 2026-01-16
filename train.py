@@ -11,6 +11,11 @@ args = parser.parse_args()
 
 for level in [1, 2, 3, 4]:
     print(f"\n\n ----- LEVEL {level} -----")
+    # env = ShepherdEnv(level=level, n_sheep=5)
+    # eval_env = ShepherdEnv(level=level, n_sheep=5)
+    # print(f"\t ----- LEVEL {level} / PPO (#sheep:{env.n_sheep})-----")
+    # model = train_rl_agent_ppo_mlp(env, eval_env, timesteps=1000000)
+    # model.save(f"models/shepherd_level{level}_ppo_mlp")
 
     if args.algorithm in ["td3", "all"]:
         try:
@@ -19,8 +24,8 @@ for level in [1, 2, 3, 4]:
             print(f"\t ----- LEVEL {level} / TD3  (#sheep:{env.n_sheep})-----")
             model = train_rl_agent_td3_mlp(env, eval_env, timesteps=1000000)
             model.save(f"models/shepherd_level{level}_td3_mlp")
-        except:
-            print(f"!!! LEVEL {level} / TD3  Failed")
+        except Exception as e:
+            print(f"!!! LEVEL {level} / TD3  Failed: {e}")
 
     if args.algorithm in ["a2c", "all"]:
         try:
@@ -29,8 +34,8 @@ for level in [1, 2, 3, 4]:
             print(f"\t ----- LEVEL {level} / A2C (#sheep:{env.n_sheep})-----")
             model = train_rl_agent_a2c_mlp(env, eval_env, timesteps=1000000)
             model.save(f"models/shepherd_level{level}_a2c_mlp")
-        except:
-            print(f"!!! LEVEL {level} / A2C  Failed")
+        except Exception as e:
+            print(f"!!! LEVEL {level} / A2C  Failed: {e}")
 
     if args.algorithm in ["ppo", "all"]:
         try:
@@ -39,7 +44,7 @@ for level in [1, 2, 3, 4]:
             print(f"\t ----- LEVEL {level} / PPO (#sheep:{env.n_sheep})-----")
             model = train_rl_agent_ppo_mlp(env, eval_env, timesteps=1000000)
             model.save(f"models/shepherd_level{level}_ppo_mlp")
-        except:
-            print(f"!!! LEVEL {level} / PPO  Failed")
+        except Exception as e:
+            print(f"!!! LEVEL {level} / PPO  Failed: {e}")
 
 

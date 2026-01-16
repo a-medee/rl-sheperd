@@ -17,7 +17,7 @@ class Sheep:
 class ShepherdEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, level=1, n_sheep=0, screen_size=600, sheep_radius=5, goal_radius=100, max_steps=2000, dt=2e-1):
+    def __init__(self, level=1, n_sheep=0, screen_size=600, sheep_radius=5, goal_radius=100, max_steps=5000, dt=2e-1):
         super().__init__()
         self.level = level
         if n_sheep == 0:
@@ -149,7 +149,7 @@ class ShepherdEnv(gym.Env):
         reached = self._check_goal()
         if self.level < 4:
             rewards = np.zeros(self.n_shepherds)
-            reward = reached.sum()*100 
+            reward = reached.sum()*500 
         else:
             # Level 4 competitive: difference of sheep in own goal
             rewards = np.zeros(self.n_shepherds)
@@ -164,23 +164,27 @@ class ShepherdEnv(gym.Env):
             for s in self.sheep:
                 if not np.linalg.norm(s.pos - self.goals[i])<self.goal_radius:
                     dist = np.linalg.norm(sh.pos - s.pos)
-                    if dist < 100:
-                        reward += 0.01  # Small bonus for staying close
-                    else:
-                        reward -= 0.005 # Small penalty for being too far
+                    # 2. Reward/Penalty for Shepherd distance to Sheep
+                    reward -= dist * 0.01 
+
+                    # if dist < 100:
+                    #     reward += 0.01  # Small bonus for staying close
+                    # else:
+                    #     reward -= 0.005 # Small penalty for being too far
 
                     # 3. Shaping: Reward for Sheep getting closer to goal
                     dist_to_goal = np.linalg.norm(s.pos - self.goals[0])
                     # We use a negative distance so that "closer" is a "higher" (less negative) number
-                    reward -= dist_to_goal * 0.1 
+                    reward -= dist_to_goal * 0.05 
 
-        # 4. Small penalty for time to encourage efficiency
-        reward -= 0.01
+        # # 4. Small penalty for time to encourage efficiency
+        reward -= 0.001
 
         # Done if all sheep reached goal or max steps
         if reached.all() or self.steps >= self.max_steps:
             self.done = True
 
+        # return reward
         return reward,rewards
 
     def step(self, actions):
@@ -190,7 +194,7 @@ class ShepherdEnv(gym.Env):
         reward,_ = self.reward_function()
 
         if self.done:
-            return self._get_obs(), self.reward_function(), self.done, {}
+            return self._get_obs(), self.reward_function()[0], self.done, {}
 
         # Update shepherds
         self.update_wheels(actions)
@@ -198,7 +202,7 @@ class ShepherdEnv(gym.Env):
         # Update sheep
         self._update_sheep()
 
-        print(f"Step {self.steps}, Reward: {reward}")
+        # print(f"Step {self.steps}, Reward: {reward}")
 
         return self._get_obs(), reward, self.done, {}
 
