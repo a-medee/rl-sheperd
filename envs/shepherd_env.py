@@ -178,7 +178,7 @@ class ShepherdEnv(gym.Env):
                     reward -= dist_to_goal * 0.05 
 
         # # 4. Small penalty for time to encourage efficiency
-        reward -= 0.001
+        reward -= self.steps*0.1
 
         # Done if all sheep reached goal or max steps
         if reached.all() or self.steps >= self.max_steps:
