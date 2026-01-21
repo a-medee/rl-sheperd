@@ -1,71 +1,9 @@
-# ShepherdRL – Multi-Level Robotic Shepherding with Reinforcement Learning
+# ShepherdRL – Progressive Robotic Shepherding with Rule-Based and RL Agents
 
-This project implements a **custom reinforcement learning environment** for robotic shepherding, inspired by biologically grounded flocking dynamics (Strombom model).  
-The goal is to coordinate one or more **differential-drive robotic shepherds** to guide a group of sheep-like agents toward designated goal regions.
+ShepherdRL is a **custom reinforcement learning environment** for robotic shepherding inspired by biologically grounded flocking dynamics (e.g., the Strömbom model).  
+The environment is structured into **four progressive problem levels**, enabling curriculum learning from simple deterministic control to multi-agent coordination.
 
-The environment is implemented in **Gym style**, includes **real-time visualization using Pygame**, and supports **rule-based and RL-based agents** across **four increasingly complex levels**.
-
----
-
-## Project Overview
-
-### Core Features
-- Custom Gym-style environment
-- Differential-drive shepherd robots (left/right wheels)
-- Sheep with shepherd-avoidance behavior
-- Pygame visualization
-- Rule-based heuristic agent
-- Reinforcement Learning (PPO / Stable-Baselines3)
-- Multi-agent cooperative and competitive settings
-
----
-
-## Environment Levels
-
-### Level 1 – Basic Shepherding
-- 1 shepherd
-- 5 sheeps
-- Random goal (circular area)
-- No obstacles
-- Deterministic dynamics
-
-### Level 2 – Obstacle Avoidance
-- Same as Level 1
-- One random square obstacle
-- Sheep and shepherd cannot start inside obstacle
-
-### Level 3 – Cooperative Multi-Shepherd
-- 2 shepherds
-- Shared goal
-- Shared reward = number of sheep in goal
-- Turn-based action execution
-
-### Level 4 – Competitive Multi-Shepherd
-- 2 shepherds
-- Separate goal regions (random corners)
-- Competitive reward: reward = sheep_in_own_goal − sheep_in_opponent_goal
-- Turn-based multi-agent interaction
-
----
-
-## Sheep Behavior Model
-
-- If a shepherd is **close**, the sheep moves **directly away** from the shepherd (goal ignored)
-- Otherwise:
-- Levels 1–3: random movement
-- Level 4: moves toward nearest goal
-- Once a sheep enters a goal area, it **cannot exit**
-
----
-
-### Rule-Based Shepherd
-- Finds **furthest sheep from goal**
-- Computes a **driving point behind the sheep** along the goal→sheep line
-- Moves toward that point to push sheep toward the goal
-
-Used for:
-- Levels 1–2
-- Optional warm-start for RL training
+The project follows a **Gym-style API**, includes **real-time visualization using Pygame**, and supports both **rule-based agents** and **reinforcement learning agents** (e.g., PPO via Stable-Baselines3).
 
 ---
 
@@ -89,8 +27,139 @@ shepherd_rl/
 │  ├─ rule_based_agent.py   # Heuristic agent
 │  └─ rl_agent.py           # RL utilities
 │
-├─ main.py                  # Run simulation (rule-based or RL)
+├─ test.py                  # Run simulation (rule-based or RL)
 ├─ train.py                 # Train RL agents (Levels 3 & 4)
 ├─ models/                  # Saved RL models (.zip)
 └─ README.md
 ```
+
+---
+
+## Problem Levels
+
+### Level 1 – Basic Shepherding (Sleepy Sheep)
+
+**Purpose:**  
+Learn fundamental shepherd–sheep interaction in a fully deterministic setting.
+
+**Configuration:**
+- Single shepherd agent
+- No obstacles
+- Sheep are *sleepy* (static unless influenced)
+- Deterministic dynamics
+
+**Sheep Behavior:**
+- Sheep do not move unless the shepherd is close
+- When close, sheep move directly away from the shepherd
+
+**Training Variants:**
+- Number of sheep: **1, 2, or 3**
+
+---
+
+### Level 2 – Active Sheep (Random Motion)
+
+**Purpose:**  
+Introduce stochasticity and robustness requirements.
+
+**Configuration:**
+- Single shepherd agent
+- No obstacles
+- Variable number of sheep
+
+**Sheep Behavior:**
+- If the shepherd is far: sheep move randomly
+- If the shepherd is close: sheep move away from the shepherd
+
+---
+
+### Level 3 – Obstacle-Constrained Shepherding
+
+**Purpose:**  
+Introduce spatial constraints and navigation challenges.
+
+**Configuration:**
+- Single shepherd agent
+- One circular obstacle in the environment
+
+**Obstacle Rules:**
+- Sheep cannot enter the obstacle area
+- Shepherd cannot pass through the obstacle
+
+**Sheep Behavior:**
+- Same as Level 2
+
+---
+
+### Level 4 – Alternating Multi-Agent Shepherding
+
+**Purpose:**  
+Learn coordination under **turn-based multi-agent control**.
+
+**Configuration:**
+- Two trained shepherd agents
+- Shared environment and shared goal
+- No simultaneous actions
+
+**Control Mechanism:**
+- Only one shepherd acts at each timestep
+- Agents alternate actions deterministically
+
+---
+
+## Sheep Behavior Summary
+
+| Condition | Sheep Action |
+|--------|-------------|
+| Shepherd close | Move away from shepherd |
+| Shepherd far (Level 1) | Remain static |
+| Shepherd far (Levels 2–4) | Random movement |
+| Inside goal | Locked, cannot exit |
+| Inside obstacle | Not allowed |
+
+---
+
+## Rule-Based Shepherd Agents
+
+Three **rule-based shepherd agents** are included for benchmarking, debugging, and comparison against RL policies.
+
+---
+
+### 1. Standard Rule-Based Shepherd
+
+**Behavior:**
+- Selects the sheep furthest from the goal
+- Computes a driving point behind the sheep along the goal → sheep line
+- Moves toward the driving point to push the sheep toward the goal
+
+**Characteristics:**
+- Deterministic
+- Goal-driven
+
+---
+
+### 2. Lazy Shepherd
+
+
+**Behavior:**
+- Always outputs a **constant action**
+- Action does not depend on sheep positions, goal location, or environment state
+- No feedback or adaptation
+
+---
+
+### 3. Tipsy Shepherd
+
+**Behavior:**
+- Actions are sampled **entirely at random**
+- No dependence on observations or goal
+- No internal logic or strategy
+
+---
+
+## Future Extensions
+
+- Multiple and dynamic obstacles
+- Communication between shepherd agents
+- Competitive multi-goal scenarios
+- Domain randomization for sim-to-real transfer

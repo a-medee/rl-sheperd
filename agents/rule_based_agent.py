@@ -1,53 +1,120 @@
 import numpy as np
 
+import numpy as np
+
+
 class RuleBasedShepherd:
-    def __init__(self, env_init,drive_distance=50):
+    def __init__(
+        self,
+        guide_offset=0.10,
+        arrive_threshold=0.05
+    ):
         """
-        drive_distance: how far behind the furthest sheep to drive
+        guide_offset: how far BEHIND the sheep (relative to goal direction)
+        arrive_threshold: distance at which sheep is considered 'done'
         """
-        self.drive_distance = drive_distance
-        self.env=env_init
+        self.guide_offset = guide_offset
+        self.arrive_threshold = arrive_threshold
 
-    def _check_goal(self):
-        reached = np.zeros(len(self.env.sheep), dtype=bool)
-        for i, s in enumerate(self.env.sheep):
-            for g in self.env.goals:
-                if np.linalg.norm(s.pos - g) < self.env.goal_radius:
-                    reached[i] = True
-        return reached
-
-    def act(self, obs, n_sheep, n_shepherds=1, shepherd_idx=0):
+    def act(self, obs):
         """
-        obs: flattened observation array
-        n_sheep: number of sheep
-        n_shepherds: number of shepherds
-        shepherd_idx: index of this shepherd
+        obs: flattened observation vector
+        returns: action angle in degrees [-180, +180]
         """
-        # Extract positions
-        sheep_pos = obs[:2*n_sheep].reshape((n_sheep,2))
-        shepherd_pos = obs[2*n_sheep + 2*shepherd_idx : 2*n_sheep + 2*(shepherd_idx+1)]
-        goals_pos = obs[2*n_sheep + 2*n_shepherds:].reshape((n_shepherds,2))
-        goal = goals_pos[shepherd_idx]
 
-        # Furthest sheep from goal
-        distances = np.linalg.norm(sheep_pos - goal, axis=1)
-        idx = np.argmax(distances*(~self._check_goal()))
-        furthest_sheep = sheep_pos[idx]
+        obs = np.array(obs)
+        n_sheep = (len(obs) - 2) // 4
 
-        # Line from goal → sheep
-        g2s = furthest_sheep - goal
-        norm = np.linalg.norm(g2s)
+        sheep_positions = []
+        goal_positions = []
+
+        shepherd_pos = np.zeros(2)  # shepherd is origin in relative coords
+
+        # --- Reconstruct absolute positions ---
+        for i in range(n_sheep):
+            sheep_rel = obs[i * 4 : i * 4 + 2]
+            goal_rel  = obs[i * 4 + 2 : i * 4 + 4]
+
+            sheep_pos = shepherd_pos + sheep_rel
+            goal_pos  = sheep_pos + goal_rel
+
+            sheep_positions.append(sheep_pos)
+            goal_positions.append(goal_pos)
+
+        sheep_positions = np.array(sheep_positions)
+        goal_positions = np.array(goal_positions)
+
+        # --- Compute distances to goal ---
+        dists = np.linalg.norm(sheep_positions - goal_positions, axis=1)
+
+        active = dists > self.arrive_threshold
+        if not np.any(active):
+            return np.array([0.0], dtype=np.float32)  # arbitrary heading
+
+        # --- Select furthest sheep ---
+        idx = np.argmax(dists * active)
+        sheep = sheep_positions[idx]
+        goal = goal_positions[idx]
+
+        # --- Compute guiding direction ---
+        goal_dir = goal - sheep
+        norm = np.linalg.norm(goal_dir)
         if norm < 1e-6:
-            g2s = np.array([1.0,0.0])
-        else:
-            g2s /= norm
+            return np.array([0.0], dtype=np.float32)
 
-        # Driving point beyond sheep
-        drive_point = furthest_sheep + g2s * self.drive_distance
-        drive_point=np.clip(drive_point,0,self.env.screen_size)
+        goal_dir /= norm
 
-        # Compute vector toward driving point
-        vec = drive_point - shepherd_pos
-        # print(f"Shepherd {shepherd_idx} driving to point {drive_point} from pos {shepherd_pos} with vector {vec}")
+        # --- Desired shepherd position (behind sheep) ---
+        guide_pos = sheep - goal_dir * self.guide_offset
 
-        return np.array(vec)/sum(abs(vec))
+        # --- Desired movement direction ---
+        move_vec = guide_pos - shepherd_pos
+        move_norm = np.linalg.norm(move_vec)
+
+        if move_norm < 1e-6:
+            return np.array([0.0], dtype=np.float32)
+
+        move_vec /= move_norm
+
+        # --- Convert direction vector to angle ---
+        angle_rad = np.arctan2(move_vec[1], move_vec[0])
+        angle_deg = np.rad2deg(angle_rad)/180  # Scale to [-1, +1]
+
+        # Normalize to [-180, +180]
+        angle_deg = ((angle_deg + 1) % 2) - 1
+
+        return np.array([angle_deg], dtype=np.float32)
+
+
+class LazyShepherd:
+    def __init__(self):
+        self.angle = None
+
+    def reset(self):
+        """
+        Must be called at the beginning of each episode
+        """
+        self.angle = np.random.uniform(-1, 1)
+
+    def act(self, obs):
+        """
+        Returns the same orientation angle throughout the episode
+        """
+        if self.angle is None:
+            self.reset()
+
+        return np.array([self.angle], dtype=np.float32)
+    
+
+class TipsyShepherd:
+    def __init__(self):
+        pass
+
+    def act(self, obs):
+        """
+        Returns a random orientation angle in degrees (*180) [-1, +1]
+        """
+        angle = np.random.uniform(-1, 1)
+        return np.array([angle], dtype=np.float32)
+    
+
