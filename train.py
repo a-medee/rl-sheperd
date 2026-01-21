@@ -43,23 +43,23 @@ eval_env = ShepherdEnv(n_sheep=args.num_sheep,
 if args.algorithm in ["td3", "all"]:
     try:
         print(f"Training with TD3 algorithm (#sheep: {env.n_sheep})...")
-        model = train_rl_agent_td3_mlp(env, eval_env, timesteps=3000000)
-        model.save(f"models/td3")
+        model = train_rl_agent_td3_mlp(env, eval_env, timesteps=2000000)
+        model.save(f"models/td3_sheep{env.n_sheep}_obst{args.obstacle_radius}")
     except Exception as e:
         print(f"TD3 training failed: {e}")
 
 if args.algorithm in ["a2c", "all"]:
     try:
         print(f"Training with A2C algorithm (#sheep: {env.n_sheep})...")
-        model = train_rl_agent_a2c_mlp(env, eval_env, timesteps=3000000)
-        model.save(f"models/a2c")
+        model = train_rl_agent_a2c_mlp(env, eval_env, timesteps=2000000)
+        model.save(f"models/a2c_sheep{env.n_sheep}_obst{args.obstacle_radius}")
     except Exception as e:
         print(f"A2C training failed: {e}")
 
 if args.algorithm in ["ppo", "all"]:
     try:
         print(f"Training with PPO algorithm (#sheep: {env.n_sheep})...")
-        model = train_rl_agent_ppo_mlp(env, eval_env, timesteps=3000000)
-        model.save(f"models/ppo")
+        model = train_rl_agent_ppo_mlp(env, eval_env, timesteps=2000000)
+        model.save(f"models/ppo_sheep{env.n_sheep}_obst{args.obstacle_radius}")
     except Exception as e:
         print(f"PPO training failed: {e}")
