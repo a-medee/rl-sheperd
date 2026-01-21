@@ -25,6 +25,7 @@ class ShepherdEnv(gym.Env):
         n_sheep=5,
         world_size=1.0,
         goal_radius=0.1,
+        obstacle_radius=0,
         sheep_repulsion_radius=0.2,
         shepherd_speed=0.05,     # NEW: constant shepherd speed
         max_steps=500
@@ -34,6 +35,11 @@ class ShepherdEnv(gym.Env):
         self.n_sheep = n_sheep
         self.world_size = world_size
         self.goal_radius = goal_radius
+        if obstacle_radius > 0.3:
+            print("Warning: obstacle_radius too large, setting to 0.3")
+            self.obstacle_radius = 0.3
+        else:
+            self.obstacle_radius = obstacle_radius
         self.repulsion_radius = sheep_repulsion_radius
         self.shepherd_speed = shepherd_speed
         self.max_steps = max_steps
@@ -49,7 +55,7 @@ class ShepherdEnv(gym.Env):
         # Observation:
         # For each sheep: [sheep_rel_x, sheep_rel_y, goal_rel_x, goal_rel_y]
         # Plus goal relative to shepherd
-        obs_dim = 4 * self.n_sheep + 2
+        obs_dim = 4 * self.n_sheep + 2 + 2  # +2 for goal and +2 for obstacle related to shepherd
         self.observation_space = spaces.Box(
             low=-1.0,
             high=1.0,
@@ -64,7 +70,12 @@ class ShepherdEnv(gym.Env):
 
         self.shepherd = np.random.uniform(-0.8, 0.8, size=2)
         # self.shepherd_dir = 0  # initial direction
+        self.obstacle = np.random.uniform(-0.8, 0.8, size=2)
         self.goal = np.random.uniform(-0.8, 0.8, size=2)
+        
+        while np.linalg.norm(self.obstacle - self.goal) < (self.goal_radius + self.obstacle_radius + 0.1):
+            self.goal = np.random.uniform(-0.8, 0.8, size=2)
+            self.obstacle = np.random.uniform(-0.8, 0.8, size=2)
 
         self.sheep = [
             np.random.uniform(-0.8, 0.8, size=2)
@@ -84,6 +95,8 @@ class ShepherdEnv(gym.Env):
 
         goal_rel = self.goal - self.shepherd
         obs.extend(goal_rel)
+        obstacle_rel = self.obstacle - self.shepherd
+        obs.extend(obstacle_rel)
 
         return np.clip(np.array(obs, dtype=np.float32), -1.0, 1.0)
 
@@ -119,7 +132,13 @@ class ShepherdEnv(gym.Env):
                 move += (vec / (dist + 1e-6)) * 0.05
 
             if np.linalg.norm(s - self.goal) > self.goal_radius:
-                self.sheep[i] = np.clip(s + move, -0.9, 0.9)
+                if self.obstacle_radius > 0:
+                    if np.linalg.norm((np.clip(s + move, -0.9, 0.9)) - self.obstacle) > (self.obstacle_radius + 0.05):
+                        self.sheep[i] = np.clip(s + move, -0.9, 0.9)
+                    else:
+                        self.sheep[i] = np.clip(s - move, -0.9, 0.9)
+                else:
+                    self.sheep[i] = np.clip(s + move, -0.9, 0.9)
 
         # --- Reward ---
         reward = 0.0
@@ -186,9 +205,16 @@ class ShepherdEnv(gym.Env):
 
         # Draw goal
         pygame.draw.circle(
-            self.screen, (0, 200, 0),
-            to_px(self.goal), int(self.goal_radius * self.screen_size_px), width=0
+            self.screen, (200, 0, 0),
+            to_px(self.goal), int(self.goal_radius * self.screen_size_px/2), width=8
         )
+
+        # Draw obstacle
+        if self.obstacle_radius > 0:
+            pygame.draw.circle(
+                self.screen, (100, 100, 100),
+                to_px(self.obstacle), int(self.obstacle_radius * self.screen_size_px/ 2), width=0
+            )
 
         # Draw sheep
         for s in self.sheep:

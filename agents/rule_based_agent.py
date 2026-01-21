@@ -23,7 +23,7 @@ class RuleBasedShepherd:
         """
 
         obs = np.array(obs)
-        n_sheep = (len(obs) - 2) // 4
+        n_sheep = (len(obs) - 4) // 4 # 4 values per sheep (-4 for goal and obstacle)
 
         sheep_positions = []
         goal_positions = []

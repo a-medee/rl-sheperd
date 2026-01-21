@@ -23,11 +23,22 @@ parser.add_argument(
     help="Maximum number of steps per episode.",
 )
 
+parser.add_argument(
+    "-r", "--obstacle_radius",
+    type=float,
+    default=0.0,
+    help="Radius of obstacles in the environment.",
+)
+
 args = parser.parse_args()
 
 
-env = ShepherdEnv(n_sheep=args.num_sheep, max_steps=args.max_steps)#level=level, n_sheep=5)
-eval_env = ShepherdEnv(n_sheep=args.num_sheep, max_steps=args.max_steps)#level=level, n_sheep=5)
+env = ShepherdEnv(n_sheep=args.num_sheep,
+                max_steps=args.max_steps,
+                obstacle_radius=args.obstacle_radius)
+eval_env = ShepherdEnv(n_sheep=args.num_sheep,
+                        max_steps=args.max_steps,
+                        obstacle_radius=args.obstacle_radius)
 
 if args.algorithm in ["td3", "all"]:
     try:

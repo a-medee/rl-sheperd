@@ -87,12 +87,21 @@ def main():
         help="Maximum number of steps per episode.",
     )
 
+    parser.add_argument(
+        "-r", "--obstacle_radius",
+        type=float,
+        default=0.0,
+        help="Radius of obstacles in the environment.",
+    )
+
     args = parser.parse_args()
 
     rewards = []
 
     for eps in range(1, args.num_episodes + 1):
-        env = ShepherdEnv(n_sheep=args.num_sheep, max_steps=args.max_steps)
+        env = ShepherdEnv(n_sheep=args.num_sheep,
+                        max_steps=args.max_steps,
+                        obstacle_radius=args.obstacle_radius)
         print(
             f"Environment initialized with "
             f"{env.n_sheep} sheep for episode {eps}"
