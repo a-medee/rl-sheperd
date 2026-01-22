@@ -165,7 +165,7 @@ class ShepherdEnv(gym.Env):
         if self._max_sheep_goal_dist() < self.goal_radius:
             # print("All sheep reached the goal!")
             reward += 200.0*self.n_sheep
-            reward += (self.max_steps - self.steps)
+            reward += 5*(self.max_steps - self.steps)
             done = True
         else:
             for i, s in enumerate(self.sheep):
