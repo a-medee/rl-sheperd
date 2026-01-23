@@ -24,7 +24,7 @@ class ShepherdEnv(gym.Env):
         self,
         n_sheep=5,
         world_size=1.0,
-        goal_radius=0.1,
+        goal_radius=0.7,
         obstacle_radius=0,
         sheep_repulsion_radius=0.2,
         shepherd_speed=0.05,     # NEW: constant shepherd speed
@@ -81,6 +81,9 @@ class ShepherdEnv(gym.Env):
             np.random.uniform(-0.8, 0.8, size=2)
             for _ in range(self.n_sheep)
         ]
+        for i, s in enumerate(self.sheep):
+            if np.linalg.norm(s - self.goal) < self.goal_radius:
+                self.sheep[i] = np.random.uniform(-0.8, 0.8, size=2)
 
         self.prev_goal_dist = self._mean_sheep_goal_dist()
         return self._get_obs()
@@ -145,7 +148,8 @@ class ShepherdEnv(gym.Env):
 
         # 1. Sheep progress toward goal
         curr_dist = self._mean_sheep_goal_dist()
-        reward += (self.prev_goal_dist - curr_dist) * 30.0
+        reward += (self.prev_goal_dist - curr_dist) * 300.0
+        # print(f"\nstep_{self.steps} Reward from sheep progress:{(self.prev_goal_dist - curr_dist) * 300.0:.2f}")
         self.prev_goal_dist = curr_dist
 
         # 2. Shepherd proximity to worst sheep
@@ -155,10 +159,12 @@ class ShepherdEnv(gym.Env):
         )
         dist_to_target_sheep = sheep_dists[furthest_idx]
         reward += 5.0 * np.exp(-5.0 * dist_to_target_sheep)
+        # print(f"step_{self.steps} Reward from shepherd proximity ({dist_to_target_sheep:.5}):{20.0 * np.exp(-5.0 * dist_to_target_sheep):.2f}")
 
         # 3. Small movement regularization
         shepherd_move = np.linalg.norm(self.shepherd - self.prev_shepherd)
-        reward -= 0.01 * np.exp(-20.0 * shepherd_move)
+        reward -= 10 *np.exp(-100.0 * shepherd_move)
+        # print(f"step_{self.steps} Penalty from shepherd movement ({shepherd_move:.5f}):{10*np.exp(-100.0 * shepherd_move):.4f}")
 
         # --- Termination ---
         done = False

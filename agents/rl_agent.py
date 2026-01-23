@@ -3,12 +3,14 @@ from stable_baselines3.common.noise import NormalActionNoise
 import numpy as np
 from stable_baselines3.common.callbacks import EvalCallback
 
-def train_rl_agent_ppo_mlp(env,eval_env, timesteps=2000000):
+def train_rl_agent_ppo_mlp(env,eval_env, timesteps=2000000,checkpoint_dir=None,criculam_learning=False):
     # model = PPO("MlpPolicy", env, verbose=1,device='cpu', tensorboard_log="./ppo_shepherd_logs/")
     log_dir = f"./logs/ppo/"
-    model = PPO(
-                "MlpPolicy",
-                env,
+    
+    if checkpoint_dir is not None:
+        print(f"Loading checkpoint from {checkpoint_dir}...")
+        PPO.load(checkpoint_dir,
+                env=env,
                 n_steps=2048,
                 ent_coef=0.003,
                 learning_rate=3e-4,
@@ -16,6 +18,21 @@ def train_rl_agent_ppo_mlp(env,eval_env, timesteps=2000000):
                 verbose=1,
                 tensorboard_log=log_dir
                 )
+        if criculam_learning:
+            # Reinitialize optimizer and PPO internals
+            model._setup_model()
+    else:
+        print("No checkpoint provided, training from scratch.")
+        model = PPO("MlpPolicy",
+                    env=env,
+                    n_steps=2048,
+                    ent_coef=0.003,
+                    learning_rate=3e-4,
+                    gamma=0.99,
+                    verbose=1,
+                    tensorboard_log=log_dir
+                    )
+    
     eval_callback = EvalCallback(eval_env, best_model_save_path=log_dir,
                                 log_path=log_dir, eval_freq=20000,n_eval_episodes=20,
                                 deterministic=True, render=False)
@@ -24,7 +41,7 @@ def train_rl_agent_ppo_mlp(env,eval_env, timesteps=2000000):
 
 def train_rl_agent_a2c_mlp(env, eval_env, timesteps=5000000):
     log_dir = f"./logs/a2c/"
-    model = A2C("MlpPolicy", env, verbose=1,tensorboard_log=log_dir)
+    model = A2C(env, verbose=1,tensorboard_log=log_dir)
     eval_callback = EvalCallback(eval_env, best_model_save_path=log_dir,
                                 log_path=log_dir, eval_freq=20000,n_eval_episodes=20,
                                 deterministic=True, render=False)

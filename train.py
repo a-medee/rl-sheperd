@@ -7,7 +7,7 @@ import argparse
 parser = argparse.ArgumentParser(description="Train RL agents for ShepherdEnv.")
 parser.add_argument("-a", "--algorithm", type=str,
                     choices=["td3", "a2c", "ppo", "all"], default="ppo",
-                    help="Choose the algorithm to train: 'td3', 'a2c', 'ppo', or 'all'. Default is 'all'.")
+                    help="Choose the algorithm to train: 'td3', 'a2c', 'ppo', or 'all'. Default is 'ppo'.")
 
 parser.add_argument(
     "-s", "--num_sheep",
@@ -30,6 +30,19 @@ parser.add_argument(
     help="Radius of obstacles in the environment.",
 )
 
+parser.add_argument(
+    "-c", "--checkpoint_dir",
+    type=str,
+    default=None,
+    help="Directory to load a checkpoint from. If not provided, training starts from scratch.",
+)
+
+parser.add_argument(
+    "-cl", "--criculam_learning",
+    type=bool,
+    default=True,
+    help="Enable or disable curriculum learning. Default is True.",
+)
 args = parser.parse_args()
 
 
@@ -43,8 +56,10 @@ eval_env = ShepherdEnv(n_sheep=args.num_sheep,
 if args.algorithm in ["td3", "all"]:
     try:
         print(f"Training with TD3 algorithm (#sheep: {env.n_sheep})...")
-        model = train_rl_agent_td3_mlp(env, eval_env, timesteps=2000000)
-        model.save(f"models/td3_sheep{env.n_sheep}_obst{args.obstacle_radius}")
+        model = train_rl_agent_td3_mlp(env, eval_env, timesteps=2000000,
+                                       checkpoint_dir=args.checkpoint_dir,
+                                       criculam_learning=args.criculam_learning)
+        model.save(f"models/td3_sheep{env.n_sheep}_obst{int(args.obstacle_radius*10)}")
     except Exception as e:
         print(f"TD3 training failed: {e}")
 
@@ -52,7 +67,7 @@ if args.algorithm in ["a2c", "all"]:
     try:
         print(f"Training with A2C algorithm (#sheep: {env.n_sheep})...")
         model = train_rl_agent_a2c_mlp(env, eval_env, timesteps=2000000)
-        model.save(f"models/a2c_sheep{env.n_sheep}_obst{args.obstacle_radius}")
+        model.save(f"models/a2c_sheep{env.n_sheep}_obst{int(args.obstacle_radius*10)}")
     except Exception as e:
         print(f"A2C training failed: {e}")
 
@@ -60,6 +75,6 @@ if args.algorithm in ["ppo", "all"]:
     try:
         print(f"Training with PPO algorithm (#sheep: {env.n_sheep})...")
         model = train_rl_agent_ppo_mlp(env, eval_env, timesteps=2000000)
-        model.save(f"models/ppo_sheep{env.n_sheep}_obst{args.obstacle_radius}")
+        model.save(f"models/ppo_sheep{env.n_sheep}_obst{int(args.obstacle_radius*10)}")
     except Exception as e:
         print(f"PPO training failed: {e}")
