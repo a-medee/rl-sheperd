@@ -258,7 +258,7 @@ def train_image_dqn(
 
     step_count = 0
     global_step = 0
-    best_reward = -float('inf')
+    mean_length = float('inf')
 
     for ep in range(episodes):
         state = env.reset()
@@ -335,8 +335,8 @@ def train_image_dqn(
                 f" | Length: {eval_stats['mean_length']:.0f}"
             )
 
-            if eval_stats['mean_reward'] > best_reward:
-                best_reward = eval_stats['mean_reward']
+            if eval_stats['mean_length'] < mean_length:
+                mean_length = eval_stats['mean_length']
                 torch.save(agent.q_net.state_dict(), f"models/agent_DQN_best.pth")
 
         print(f"[Train] Ep {ep:4d} | Reward: {ep_reward:.2f}")
