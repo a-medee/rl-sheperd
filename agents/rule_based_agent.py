@@ -1,8 +1,5 @@
 import numpy as np
 
-import numpy as np
-
-
 class RuleBasedShepherd:
     def __init__(
         self,

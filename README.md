@@ -25,7 +25,8 @@ shepherd_rl/
 │
 ├─ agents/
 │  ├─ rule_based_agent.py   # Heuristic agent
-│  └─ rl_agent.py           # RL utilities
+│  ├─ rl_agent.py           # RL utilities
+│  └─ CNN_QN.py           # DQN agent with pytorch
 │
 ├─ test.py                  # Run simulation (rule-based or RL)
 ├─ train.py                 # Train RL agents (Levels 3 & 4)
