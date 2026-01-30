@@ -10,6 +10,7 @@ import random
 import cv2
 
 from torchvision import transforms
+import os
 
 transform = transforms.Compose([
     transforms.ToPILImage(),
@@ -256,6 +257,8 @@ def train_image_dqn(
 
     log_dir = f"logs/image_dqn_{time.strftime('%Y%m%d-%H%M%S')}"
     writer = SummaryWriter(log_dir)
+    # Create models folder if it does not exist
+    os.makedirs("models", exist_ok=True)
 
     step_count = 0
     global_step = 0
