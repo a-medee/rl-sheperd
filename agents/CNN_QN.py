@@ -20,9 +20,6 @@ transform = transforms.Compose([
 N_ACTIONS = 64
 ANGLES = np.linspace(-np.pi, np.pi, N_ACTIONS)
 
-log_dir = f"logs/image_dqn_{time.strftime('%Y%m%d-%H%M%S')}"
-writer = SummaryWriter(log_dir)
-
 def render_env_to_rgb(env, img_size=84):
     """
     Render a ShepherdEnv object to an RGB image (numpy array)
@@ -153,7 +150,7 @@ class ImageDQNAgent:
         self.eps_decay = eps_decay
         self.steps = 0
 
-    def select_action(self, state):
+    def select_action(self, state,writer=None):
         self.steps += 1
 
         eps = self.eps_end + (self.eps_start - self.eps_end) * \
@@ -165,10 +162,11 @@ class ImageDQNAgent:
         with torch.no_grad():
             q_values = self.q_net(state.unsqueeze(0).to(self.device))
 
-        # writer.add_scalar("train/epsilon", eps, self.steps)
+        if writer is not None:
+            writer.add_scalar("train/epsilon", eps, self.steps)
         return q_values.argmax(dim=1).item()
     
-    def train_step(self, batch_size=32):
+    def train_step(self, batch_size=32,writer=None):
         if len(self.replay) < batch_size:
             return None
 
@@ -256,6 +254,9 @@ def train_image_dqn(
     eval_episodes=10
     ):
 
+    log_dir = f"logs/image_dqn_{time.strftime('%Y%m%d-%H%M%S')}"
+    writer = SummaryWriter(log_dir)
+
     step_count = 0
     global_step = 0
     mean_length = float('inf')
@@ -269,7 +270,7 @@ def train_image_dqn(
         ep_losses = []
 
         while not done:
-            action_idx = agent.select_action(state)
+            action_idx = agent.select_action(state,writer)
             angle = ANGLES[action_idx]
 
             _, reward, done, _ = env.step([angle])
@@ -284,7 +285,7 @@ def train_image_dqn(
             state = next_state
 
 
-            loss = agent.train_step(batch_size)
+            loss = agent.train_step(batch_size,writer)
 
             if loss is not None:
                 ep_losses.append(loss)
@@ -346,4 +347,4 @@ def train_image_dqn(
 
     return agent.q_net
 
-writer.close()
+    writer.close()
