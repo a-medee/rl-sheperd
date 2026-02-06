@@ -72,7 +72,7 @@ class ShepherdEnv(gym.Env):
         # self.shepherd_dir = 0  # initial direction
         self.obstacle = np.random.uniform(-0.8, 0.8, size=2)
         self.goal = np.random.uniform(-0.8, 0.8, size=2)
-        
+
         while np.linalg.norm(self.obstacle - self.goal) < (self.goal_radius + self.obstacle_radius + 0.1):
             self.goal = np.random.uniform(-0.8, 0.8, size=2)
             self.obstacle = np.random.uniform(-0.8, 0.8, size=2)
@@ -82,8 +82,9 @@ class ShepherdEnv(gym.Env):
             for _ in range(self.n_sheep)
         ]
         for i, s in enumerate(self.sheep):
-            if np.linalg.norm(s - self.goal) < self.goal_radius:
-                self.sheep[i] = np.random.uniform(-0.8, 0.8, size=2)
+            while np.linalg.norm(s - self.goal) < self.goal_radius:
+                s = np.random.uniform(-0.8, 0.8, size=2)
+                self.sheep[i]=s
 
         self.prev_goal_dist = self._mean_sheep_goal_dist()
         return self._get_obs()
@@ -186,7 +187,7 @@ class ShepherdEnv(gym.Env):
             reward -= 0.02
 
         return self._get_obs(), reward, done, {}
-    
+
     def render(self, mode='human'):
         """
         Render the Shepherd environment in normalized coordinates [-1,1].
@@ -243,4 +244,3 @@ class ShepherdEnv(gym.Env):
         # Update display and limit FPS
         pygame.display.flip()
         self.clock.tick(30)
-
